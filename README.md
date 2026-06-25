@@ -116,7 +116,7 @@ Condition comparisons support `equals`, `notEquals`, `contains`, `regex`, `gt`, 
 
 Because v1 has no helper, it cannot bypass CORS. If an API does not allow the Stream Dock plugin runtime origin, the request may fail as `CORS/network error`.
 
-Secrets such as API keys and bearer tokens are stored in Stream Dock action settings as plain text when placed directly in `Headers JSON`. When using the helper, use `{{secret:NAME}}` and set `STREAMDOCK_SECRET_NAME` in the helper process environment.
+Secrets such as API keys and bearer tokens are stored in Stream Dock action settings as plain text when placed directly in `Headers JSON`. Prefer `{{secret:NAME}}` with the helper, then set `STREAMDOCK_SECRET_NAME` in the helper process environment. The Property Inspector warns on common secret headers such as `Authorization`, `Cookie`, and `X-API-Key`; `Copy` and `Export` replace those header values with `{{secret:HEADER_NAME}}` placeholders.
 
 Optional helper:
 

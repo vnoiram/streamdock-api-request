@@ -2,6 +2,8 @@
   'use strict';
 
   var STANDARD_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+  var SENSITIVE_HEADER = /^(authorization|proxy-authorization|x-api-key|api-key|apikey|x-auth-token|cookie|set-cookie)$/i;
+  var SENSITIVE_FIELD = /(password|passwd|secret|token|api[_-]?key|authorization|auth)/i;
   var websocket = null;
   var context = null;
   var settings = {
@@ -88,6 +90,10 @@
     settings.presetName = byId('presetName').value.trim();
     settings.helperEndpoint = byId('helperEndpoint').value.trim();
     settings.useHelper = byId('useHelper').checked;
+    if (settings.useHelper && !settings.helperEndpoint) {
+      settings.helperEndpoint = 'http://127.0.0.1:41923/request';
+      byId('helperEndpoint').value = settings.helperEndpoint;
+    }
     settings.conditionsJson = byId('conditionsJson').value.trim();
     settings.sequenceJson = byId('sequenceJson').value.trim();
     settings.imageMode = byId('imageMode').checked;
@@ -103,6 +109,7 @@
     readSettingsFromForm();
     websocket.send(JSON.stringify({ event: 'setSettings', context: context, payload: settings }));
     renderPresetNames();
+    renderSecretGuidance();
   }
 
   function applySettings(next) {
@@ -142,6 +149,7 @@
     byId('onlyFeedbackOnChange').checked = settings.onlyFeedbackOnChange === true || settings.onlyFeedbackOnChange === 'true';
     byId('failOnConditionMiss').checked = settings.failOnConditionMiss === true || settings.failOnConditionMiss === 'true';
     renderPresetNames();
+    renderSecretGuidance();
   }
 
   function parsePresets() {
@@ -200,7 +208,7 @@
 
   function exportSettings() {
     readSettingsFromForm();
-    var blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    var blob = new Blob([JSON.stringify(sanitizedSettings(settings), null, 2)], { type: 'application/json' });
     var link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'streamdock-api-request-settings.json';
@@ -223,11 +231,122 @@
 
   function copySettings() {
     readSettingsFromForm();
-    navigator.clipboard.writeText(JSON.stringify(settings, null, 2)).then(function () {
+    navigator.clipboard.writeText(JSON.stringify(sanitizedSettings(settings), null, 2)).then(function () {
       setStatus('settings copied');
     }).catch(function () {
       setStatus('copy failed');
     });
+  }
+
+  function renderSecretGuidance() {
+    var element = byId('secretStatus');
+    if (!element) return;
+    var findings = sensitiveHeaderNames(byId('headersJson').value);
+    if (findings.length === 0) {
+      element.textContent = 'use {{secret:NAME}} with helper for tokens';
+      return;
+    }
+    element.textContent = 'secret-like header: use helper + {{secret:' + secretName(findings[0]) + '}}';
+  }
+
+  function sensitiveHeaderNames(headersJson) {
+    if (!headersJson || !headersJson.trim()) {
+      return [];
+    }
+    try {
+      var parsed = JSON.parse(headersJson);
+      if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+        return [];
+      }
+      return Object.keys(parsed).filter(function (key) {
+        return SENSITIVE_HEADER.test(key) && !/\{\{secret:[A-Za-z0-9_.-]+\}\}/.test(String(parsed[key] || ''));
+      });
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function secretName(name) {
+    return String(name || 'TOKEN').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'TOKEN';
+  }
+
+  function sanitizedSettings(source) {
+    var copy = Object.assign({}, source || {});
+    copy.headersJson = sanitizeHeadersJson(copy.headersJson);
+    copy.body = sanitizeBody(copy.body);
+    copy.presetsJson = sanitizeJsonValue(copy.presetsJson);
+    copy.sequenceJson = sanitizeJsonValue(copy.sequenceJson);
+    return copy;
+  }
+
+  function sanitizeJsonValue(value) {
+    if (!value || !String(value).trim()) {
+      return value || '';
+    }
+    try {
+      return JSON.stringify(sanitizeObject(JSON.parse(value)), null, 2);
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function sanitizeHeadersJson(value) {
+    if (!value || !String(value).trim()) {
+      return '';
+    }
+    try {
+      return JSON.stringify(sanitizeHeadersObject(JSON.parse(value)), null, 2);
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function sanitizeObject(value) {
+    if (Array.isArray(value)) {
+      return value.map(sanitizeObject);
+    }
+    if (value && typeof value === 'object') {
+      var out = {};
+      Object.keys(value).forEach(function (key) {
+        if (key === 'headers' || key === 'headersJson') {
+          out[key] = key === 'headersJson' ? sanitizeHeadersJson(value[key]) : sanitizeHeadersObject(value[key]);
+        } else if (SENSITIVE_FIELD.test(key)) {
+          out[key] = '{{secret:' + secretName(key) + '}}';
+        } else if (key === 'body') {
+          out[key] = sanitizeBody(value[key]);
+        } else {
+          out[key] = sanitizeObject(value[key]);
+        }
+      });
+      return out;
+    }
+    return value;
+  }
+
+  function sanitizeHeadersObject(headers) {
+    if (!headers || Array.isArray(headers) || typeof headers !== 'object') {
+      return headers;
+    }
+    var out = {};
+    Object.keys(headers).forEach(function (key) {
+      out[key] = SENSITIVE_HEADER.test(key) ? '{{secret:' + secretName(key) + '}}' : headers[key];
+    });
+    return out;
+  }
+
+  function sanitizeBody(value) {
+    if (value && typeof value === 'object') {
+      return sanitizeObject(value);
+    }
+    if (!value || !String(value).trim()) {
+      return value || '';
+    }
+    try {
+      var parsed = JSON.parse(value);
+      return JSON.stringify(sanitizeObject(parsed), null, 2);
+    } catch (error) {
+      return value;
+    }
   }
 
   function pasteSettings() {
@@ -362,5 +481,6 @@
     byId('exportSettings').addEventListener('click', exportSettings);
     byId('importSettings').addEventListener('change', importSettings);
     renderPresetNames();
+    renderSecretGuidance();
   });
 }());

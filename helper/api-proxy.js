@@ -51,7 +51,7 @@ async function handleRequest(req, res) {
     const response = await fetch(body.url, {
       method: String(body.method || 'GET').toUpperCase(),
       headers: sanitizeHeaders(body.headers),
-      body: body.body || undefined,
+      body: body.body ? resolveSecretRefs(body.body) : undefined,
       signal: controller.signal
     });
     const text = await response.text();

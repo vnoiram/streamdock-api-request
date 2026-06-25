@@ -24,7 +24,8 @@
     </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Headers JSON</div>
-      <textarea id="headersJson" class="sdpi-item-value textarea short" placeholder='{"Authorization":"Bearer token"}'></textarea>
+      <textarea id="headersJson" class="sdpi-item-value textarea short" placeholder='{"Authorization":"Bearer {{secret:API_TOKEN}}"}'></textarea>
+      <span id="secretStatus" class="sdpi-status">use {{secret:NAME}} with helper for tokens</span>
     </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Body</div>
