@@ -22,7 +22,11 @@
     retryDelayMs: 500,
     prettyJson: false,
     presetsJson: '',
-    presetName: ''
+    presetName: '',
+    helperEndpoint: '',
+    useHelper: false,
+    conditionsJson: '',
+    sequenceJson: ''
   };
 
   function byId(id) {
@@ -73,6 +77,10 @@
     settings.prettyJson = byId('prettyJson').checked;
     settings.presetsJson = byId('presetsJson').value.trim();
     settings.presetName = byId('presetName').value.trim();
+    settings.helperEndpoint = byId('helperEndpoint').value.trim();
+    settings.useHelper = byId('useHelper').checked;
+    settings.conditionsJson = byId('conditionsJson').value.trim();
+    settings.sequenceJson = byId('sequenceJson').value.trim();
   }
 
   function update() {
@@ -102,7 +110,10 @@
       'retryCount',
       'retryDelayMs',
       'presetsJson',
-      'presetName'
+      'presetName',
+      'helperEndpoint',
+      'conditionsJson',
+      'sequenceJson'
     ].forEach(function (key) {
       if (byId(key)) {
         byId(key).value = settings[key] === undefined || settings[key] === null ? '' : settings[key];
@@ -110,6 +121,7 @@
     });
     byId('runOnAppear').checked = settings.runOnAppear === true || settings.runOnAppear === 'true';
     byId('prettyJson').checked = settings.prettyJson === true || settings.prettyJson === 'true';
+    byId('useHelper').checked = settings.useHelper === true || settings.useHelper === 'true';
     renderPresetNames();
   }
 
@@ -288,12 +300,15 @@
       'retryDelayMs',
       'presetsJson',
       'presetName',
+      'helperEndpoint',
+      'conditionsJson',
+      'sequenceJson',
       'method'
     ].forEach(function (id) {
       byId(id).addEventListener('input', update);
       byId(id).addEventListener('change', update);
     });
-    ['runOnAppear', 'prettyJson'].forEach(function (id) {
+    ['runOnAppear', 'prettyJson', 'useHelper'].forEach(function (id) {
       byId(id).addEventListener('change', update);
     });
     byId('methodPreset').addEventListener('change', function () {

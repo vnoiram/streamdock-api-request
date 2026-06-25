@@ -11,6 +11,7 @@ Current version: `0.2.0`.
 Notable `0.2.0` updates:
 
 - Added run-on-appear, feedback modes, retry settings, pretty JSON display, and Property Inspector request testing.
+- Added optional helper/proxy support, `{{secret:NAME}}` references resolved from helper environment variables, conditional display templates, and request sequences.
 - Added `npm run clean` and `npm run release:zip`.
 - Release zips include the manifest version in the filename.
 
@@ -39,6 +40,9 @@ Notable `0.2.0` updates:
 - `Retry delay`: delay between retries in milliseconds.
 - `Pretty JSON`: formats object/array `{value}` and `{body}` output before applying `Max chars`.
 - `Presets JSON`: named settings objects for quick reuse.
+- `Helper URL` / `Use helper`: sends the request through `helper/api-proxy.js`, useful for CORS-restricted APIs.
+- `Conditions`: optional JSON array for overriding display templates when a result field matches.
+- `Sequence`: optional JSON array of request settings to run in order.
 
 Preset examples:
 
@@ -74,13 +78,15 @@ Preset examples:
 
 Because v1 has no helper, it cannot bypass CORS. If an API does not allow the Stream Dock plugin runtime origin, the request may fail as `CORS/network error`.
 
-Secrets such as API keys and bearer tokens are stored in Stream Dock action settings as plain text when placed in `Headers JSON`. Use this only for endpoints and tokens where that storage model is acceptable.
+Secrets such as API keys and bearer tokens are stored in Stream Dock action settings as plain text when placed directly in `Headers JSON`. When using the helper, use `{{secret:NAME}}` and set `STREAMDOCK_SECRET_NAME` in the helper process environment.
 
-Possible v2 work:
+Optional helper:
 
-- Optional local helper/proxy for CORS-restricted APIs.
-- Secret storage outside Stream Dock settings.
-- Local file logging.
+```bash
+STREAMDOCK_SECRET_API_TOKEN=... npm run helper
+```
+
+Then set `Helper URL` to `http://127.0.0.1:41923/request` and enable `Use helper`.
 
 ## Repository Layout
 

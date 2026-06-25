@@ -11,6 +11,7 @@ const include = [
   'property-inspector.html',
   'property-inspector.js',
   'property-inspector.css',
+  'helper',
   'icons'
 ];
 

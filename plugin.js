@@ -23,7 +23,11 @@
     retryDelayMs: 500,
     prettyJson: false,
     presetsJson: '',
-    presetName: ''
+    presetName: '',
+    helperEndpoint: '',
+    useHelper: false,
+    conditionsJson: '',
+    sequenceJson: ''
   };
 
   var streamDockSocket = null;
@@ -96,6 +100,12 @@
       headers['Content-Type'] = settings.contentType;
     }
     return headers;
+  }
+
+  function resolveSecretRefs(value) {
+    return String(value || '').replace(/\{\{secret:([A-Za-z0-9_.-]+)\}\}/g, function (_, name) {
+      return '{{secret:' + name + '}}';
+    });
   }
 
   function hasHeader(headers, name) {
@@ -179,7 +189,42 @@
     var text = template.replace(/\{(status|ok|value|body|error|durationMs)\}/g, function (_, key) {
       return replacements[key];
     });
-    return truncate(text, settings.maxChars);
+    return truncate(applyConditions(text, settings, result), settings.maxChars);
+  }
+
+  function applyConditions(text, settings, result) {
+    if (!settings.conditionsJson || !String(settings.conditionsJson).trim()) {
+      return text;
+    }
+    try {
+      var conditions = JSON.parse(settings.conditionsJson);
+      if (!Array.isArray(conditions)) {
+        return text;
+      }
+      for (var i = 0; i < conditions.length; i += 1) {
+        var item = conditions[i] || {};
+        var left = valueAtPath({
+          status: result.status,
+          ok: result.ok,
+          value: result.valueText,
+          body: result.bodyText,
+          error: result.error,
+          durationMs: result.durationMs
+        }, item.path || 'value');
+        var expected = item.equals;
+        var matched = item.contains !== undefined
+          ? String(left).indexOf(String(item.contains)) !== -1
+          : String(left) === String(expected);
+        if (matched && item.template) {
+          return String(item.template).replace(/\{(status|ok|value|body|error|durationMs)\}/g, function (_, key) {
+            return String(result[key === 'value' ? 'valueText' : key === 'body' ? 'bodyText' : key] || '');
+          });
+        }
+      }
+    } catch (error) {
+      return text;
+    }
+    return text;
   }
 
   function resultTitle(result, settings) {
@@ -267,7 +312,7 @@
       }, runOptions));
     }
 
-    return fetch(settings.url, requestOptions).then(function (response) {
+    return executeFetch(settings, method, requestOptions).then(function (response) {
       return response.text().then(function (text) {
         var parsed = null;
         var value = text;
@@ -307,6 +352,65 @@
       if (timeout) clearTimeout(timeout);
       return result;
     });
+  }
+
+  function executeFetch(settings, method, requestOptions) {
+    if (settings.useHelper && settings.helperEndpoint) {
+      return fetch(settings.helperEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: settings.url,
+          method: method,
+          headers: requestOptions.headers || {},
+          body: requestOptions.body || '',
+          timeoutMs: settings.timeoutMs
+        })
+      });
+    }
+    Object.keys(requestOptions.headers || {}).forEach(function (key) {
+      requestOptions.headers[key] = resolveSecretRefs(requestOptions.headers[key]);
+    });
+    return fetch(settings.url, requestOptions);
+  }
+
+  function sequenceSteps(settings) {
+    if (!settings.sequenceJson || !String(settings.sequenceJson).trim()) {
+      return null;
+    }
+    try {
+      var parsed = JSON.parse(settings.sequenceJson);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function runSequence(context, baseSettings, options) {
+    var steps = sequenceSteps(baseSettings);
+    if (!steps || steps.length === 0) {
+      return runRequest(context, options);
+    }
+    var index = 0;
+    var last = null;
+    function next() {
+      if (index >= steps.length) {
+        return Promise.resolve(last);
+      }
+      var stepSettings = Object.assign({}, baseSettings, steps[index] || {});
+      index += 1;
+      return runRequestAttempt(context, stepSettings, Object.assign({}, options || {}, {
+        feedbackMode: index >= steps.length ? options && options.feedbackMode : 'none',
+        updateTitle: index >= steps.length
+      })).then(function (result) {
+        last = result;
+        if (!result.ok) {
+          return result;
+        }
+        return next();
+      });
+    }
+    return next();
   }
 
   function finishRequest(context, settings, result, options) {
@@ -352,7 +456,7 @@
 
   function runRequestWithConfiguredFeedback(context) {
     var settings = settingsFor(context);
-    return runRequest(context, { feedbackMode: feedbackModeFor(context, settings) });
+    return runSequence(context, settings, { feedbackMode: feedbackModeFor(context, settings) });
   }
 
   function diagnosticsTitle() {

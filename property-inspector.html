@@ -89,6 +89,23 @@
       <textarea id="presetsJson" class="sdpi-item-value textarea" placeholder='{"Local health":{"method":"GET","url":"http://127.0.0.1:8080/health"}}'></textarea>
     </div>
     <div class="sdpi-item">
+      <div class="sdpi-item-label">Helper URL</div>
+      <input id="helperEndpoint" class="sdpi-item-value" placeholder="http://127.0.0.1:41923/request">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Use helper</div>
+      <input id="useHelper" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">proxy request and resolve {{secret:NAME}}</span>
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Conditions</div>
+      <textarea id="conditionsJson" class="sdpi-item-value textarea short" placeholder='[{"path":"status","equals":200,"template":"OK\n{value}"}]'></textarea>
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Sequence</div>
+      <textarea id="sequenceJson" class="sdpi-item-value textarea" placeholder='[{"method":"POST","url":"http://127.0.0.1:8080/login"},{"method":"GET","url":"http://127.0.0.1:8080/status"}]'></textarea>
+    </div>
+    <div class="sdpi-item">
       <div class="sdpi-item-label">Preset</div>
       <input id="presetName" class="sdpi-item-value" list="presetNames" placeholder="Local health">
       <datalist id="presetNames"></datalist>
