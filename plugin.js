@@ -27,7 +27,9 @@
     helperEndpoint: '',
     useHelper: false,
     conditionsJson: '',
-    sequenceJson: ''
+    sequenceJson: '',
+    imageMode: true,
+    diffMode: false
   };
 
   var streamDockSocket = null;
@@ -57,6 +59,10 @@
 
   function setTitle(context, title) {
     sendToStreamDock({ event: 'setTitle', context: context, payload: { title: String(title || '') } });
+  }
+
+  function setImage(context, image) {
+    sendToStreamDock({ event: 'setImage', context: context, payload: { image: image } });
   }
 
   function logMessage(message) {
@@ -184,22 +190,25 @@
       value: result.valueText || '',
       body: result.bodyText || '',
       error: result.error || '',
-      durationMs: result.durationMs || ''
+      durationMs: result.durationMs || '',
+      previousValue: result.previousValueText || '',
+      changed: result.changed ? 'true' : 'false',
+      delta: result.deltaText || ''
     };
-    var text = template.replace(/\{(status|ok|value|body|error|durationMs)\}/g, function (_, key) {
+    var text = template.replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
       return replacements[key];
     });
     return truncate(applyConditions(text, settings, result), settings.maxChars);
   }
 
-  function applyConditions(text, settings, result) {
+  function conditionResult(settings, result) {
     if (!settings.conditionsJson || !String(settings.conditionsJson).trim()) {
-      return text;
+      return null;
     }
     try {
       var conditions = JSON.parse(settings.conditionsJson);
       if (!Array.isArray(conditions)) {
-        return text;
+        return null;
       }
       for (var i = 0; i < conditions.length; i += 1) {
         var item = conditions[i] || {};
@@ -209,20 +218,43 @@
           value: result.valueText,
           body: result.bodyText,
           error: result.error,
-          durationMs: result.durationMs
+          durationMs: result.durationMs,
+          previousValue: result.previousValueText,
+          changed: result.changed,
+          delta: result.deltaText
         }, item.path || 'value');
         var expected = item.equals;
         var matched = item.contains !== undefined
           ? String(left).indexOf(String(item.contains)) !== -1
           : String(left) === String(expected);
-        if (matched && item.template) {
-          return String(item.template).replace(/\{(status|ok|value|body|error|durationMs)\}/g, function (_, key) {
-            return String(result[key === 'value' ? 'valueText' : key === 'body' ? 'bodyText' : key] || '');
-          });
+        if (matched) {
+          return item;
         }
       }
     } catch (error) {
-      return text;
+      return null;
+    }
+    return null;
+  }
+
+  function replacementValue(result, key) {
+    if (key === 'value') return result.valueText;
+    if (key === 'body') return result.bodyText;
+    if (key === 'previousValue') return result.previousValueText;
+    if (key === 'changed') return result.changed ? 'true' : 'false';
+    if (key === 'delta') return result.deltaText;
+    return result[key];
+  }
+
+  function applyConditions(text, settings, result) {
+    var item = conditionResult(settings, result);
+    if (item && item.template) {
+      return String(item.template).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
+        return String(replacementValue(result, key) || '');
+      });
+    }
+    if (settings.diffMode && result.changed && result.previousValueText !== '') {
+      return text + '\nwas ' + result.previousValueText;
     }
     return text;
   }
@@ -415,6 +447,11 @@
 
   function finishRequest(context, settings, result, options) {
     var feedbackMode = options && options.feedbackMode || settings.feedbackMode || DEFAULT_SETTINGS.feedbackMode;
+    var previous = contexts[context] && contexts[context].lastResult;
+    result.previousValueText = previous && previous.valueText !== undefined ? previous.valueText : '';
+    result.changed = result.previousValueText !== '' && String(result.previousValueText) !== String(result.valueText);
+    result.deltaText = numericDelta(result.valueText, result.previousValueText);
+    var condition = conditionResult(settings, result);
     lastRequest = {
       endpoint: settings.url || '',
       method: normalizeMethod(settings.method),
@@ -425,11 +462,25 @@
     if (contexts[context] && (!options || options.updateTitle !== false)) {
       contexts[context].lastResult = result;
       setTitle(context, resultTitle(result, settings));
+      if (settings.imageMode !== false) {
+        setImage(context, resultImage(result, settings));
+      }
     }
     if (!options || options.updateTitle !== false) {
       refreshDiagnostics();
     }
-    if (feedbackMode === 'none') {
+    if (condition && condition.log) {
+      logMessage(String(condition.log).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
+        return String(replacementValue(result, key) || '');
+      }));
+    }
+    if (condition && condition.showOk === true) {
+      showOk(context);
+    }
+    if (condition && condition.showAlert === true) {
+      showAlert(context);
+    }
+    if (feedbackMode === 'none' || condition && (condition.showOk === true || condition.showAlert === true)) {
       return result;
     }
     if (result.ok) {
@@ -445,6 +496,53 @@
       }
     }
     return result;
+  }
+
+  function numericDelta(value, previous) {
+    var currentNumber = Number(value);
+    var previousNumber = Number(previous);
+    if (!Number.isFinite(currentNumber) || !Number.isFinite(previousNumber)) {
+      return '';
+    }
+    var delta = currentNumber - previousNumber;
+    return (delta > 0 ? '+' : '') + String(Math.round(delta * 1000) / 1000);
+  }
+
+  function resultImage(result, settings) {
+    var imageSpec = imageSpecFromConditions(settings, result);
+    var ok = !!result.ok;
+    var color = imageSpec.color || (ok ? '#22543d' : '#742a2a');
+    var label = imageSpec.label || (ok ? 'OK' : 'ERR');
+    var sub = imageSpec.sub || String(result.status || result.error || '');
+    return svgImage(color, '#ffffff', label, sub, ok ? 100 : 35);
+  }
+
+  function imageSpecFromConditions(settings, result) {
+    var item = conditionResult(settings, result);
+    return item ? { color: item.imageColor, label: item.imageLabel, sub: item.imageSub } : {};
+  }
+
+  function svgImage(background, foreground, main, sub, fillPercent) {
+    var fill = Math.max(0, Math.min(100, Number(fillPercent) || 0));
+    var barHeight = Math.round(116 * fill / 100);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">' +
+      '<rect width="144" height="144" rx="20" fill="' + background + '"/>' +
+      '<rect x="14" y="' + (124 - barHeight) + '" width="116" height="' + barHeight + '" rx="10" fill="' + foreground + '" opacity="0.15"/>' +
+      '<text x="72" y="66" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="700" fill="' + foreground + '">' + escapeSvg(main) + '</text>' +
+      '<text x="72" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="' + foreground + '">' + escapeSvg(truncateImageText(sub)) + '</text>' +
+      '</svg>';
+    return 'data:image/svg+xml;charset=utf8,' + encodeURIComponent(svg);
+  }
+
+  function truncateImageText(value) {
+    value = String(value || '');
+    return value.length > 12 ? value.slice(0, 12) : value;
+  }
+
+  function escapeSvg(value) {
+    return String(value || '').replace(/[&<>"]/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch];
+    });
   }
 
   function feedbackModeFor(context, settings) {
@@ -504,14 +602,17 @@
     }
     if (item.action === ACTION_DIAGNOSTICS) {
       setTitle(context, diagnosticsTitle());
+      setImage(context, svgImage('#2d3748', '#ffffff', 'API', 'DIAG', 100));
       return;
     }
     var settings = settingsFor(context);
     if (!settings.url) {
       setTitle(context, item.action === ACTION_POLL ? 'Poll\nunset' : 'API\nunset');
+      setImage(context, svgImage('#3a3a3a', '#cbd5e0', item.action === ACTION_POLL ? 'POLL' : 'API', 'UNSET', 0));
       return;
     }
     setTitle(context, normalizeMethod(settings.method) + '\n' + truncate(settings.url, 48));
+    setImage(context, svgImage(item.action === ACTION_POLL ? '#2b6cb0' : '#2d3748', '#ffffff', normalizeMethod(settings.method).slice(0, 4), 'READY', 40));
   }
 
   function rememberContext(message) {

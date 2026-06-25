@@ -99,7 +99,17 @@
     </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Conditions</div>
-      <textarea id="conditionsJson" class="sdpi-item-value textarea short" placeholder='[{"path":"status","equals":200,"template":"OK\n{value}"}]'></textarea>
+      <textarea id="conditionsJson" class="sdpi-item-value textarea short" placeholder='[{"path":"status","equals":200,"template":"OK\n{value}","imageLabel":"OK","imageColor":"#22543d"}]'></textarea>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Image state</div>
+      <input id="imageMode" class="sdpi-checkbox" type="checkbox" checked>
+      <span class="sdpi-status">change key image from result</span>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Diff</div>
+      <input id="diffMode" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">keep previous value placeholders</span>
     </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Sequence</div>
@@ -114,6 +124,8 @@
     <div class="sdpi-item">
       <div class="sdpi-item-label">Settings</div>
       <button id="testRequest" class="sdpi-button" type="button">Test</button>
+      <button id="copySettings" class="sdpi-button" type="button">Copy</button>
+      <button id="pasteSettings" class="sdpi-button" type="button">Paste</button>
       <button id="exportSettings" class="sdpi-button" type="button">Export</button>
       <label class="sdpi-button" for="importSettings">Import</label>
       <input id="importSettings" type="file" accept="application/json" hidden>

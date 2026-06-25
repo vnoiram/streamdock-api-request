@@ -26,7 +26,9 @@
     helperEndpoint: '',
     useHelper: false,
     conditionsJson: '',
-    sequenceJson: ''
+    sequenceJson: '',
+    imageMode: true,
+    diffMode: false
   };
 
   function byId(id) {
@@ -81,6 +83,8 @@
     settings.useHelper = byId('useHelper').checked;
     settings.conditionsJson = byId('conditionsJson').value.trim();
     settings.sequenceJson = byId('sequenceJson').value.trim();
+    settings.imageMode = byId('imageMode').checked;
+    settings.diffMode = byId('diffMode').checked;
   }
 
   function update() {
@@ -122,6 +126,8 @@
     byId('runOnAppear').checked = settings.runOnAppear === true || settings.runOnAppear === 'true';
     byId('prettyJson').checked = settings.prettyJson === true || settings.prettyJson === 'true';
     byId('useHelper').checked = settings.useHelper === true || settings.useHelper === 'true';
+    byId('imageMode').checked = settings.imageMode !== false && settings.imageMode !== 'false';
+    byId('diffMode').checked = settings.diffMode === true || settings.diffMode === 'true';
     renderPresetNames();
   }
 
@@ -199,6 +205,25 @@
       event.target.value = '';
     }).catch(function () {
       setStatus('import failed');
+    });
+  }
+
+  function copySettings() {
+    readSettingsFromForm();
+    navigator.clipboard.writeText(JSON.stringify(settings, null, 2)).then(function () {
+      setStatus('settings copied');
+    }).catch(function () {
+      setStatus('copy failed');
+    });
+  }
+
+  function pasteSettings() {
+    navigator.clipboard.readText().then(function (text) {
+      applySettings(JSON.parse(text));
+      update();
+      setStatus('settings pasted');
+    }).catch(function () {
+      setStatus('paste failed');
     });
   }
 
@@ -308,7 +333,7 @@
       byId(id).addEventListener('input', update);
       byId(id).addEventListener('change', update);
     });
-    ['runOnAppear', 'prettyJson', 'useHelper'].forEach(function (id) {
+    ['runOnAppear', 'prettyJson', 'useHelper', 'imageMode', 'diffMode'].forEach(function (id) {
       byId(id).addEventListener('change', update);
     });
     byId('methodPreset').addEventListener('change', function () {
@@ -317,6 +342,8 @@
     });
     byId('applyPreset').addEventListener('click', applyPreset);
     byId('testRequest').addEventListener('click', testRequest);
+    byId('copySettings').addEventListener('click', copySettings);
+    byId('pasteSettings').addEventListener('click', pasteSettings);
     byId('exportSettings').addEventListener('click', exportSettings);
     byId('importSettings').addEventListener('change', importSettings);
     renderPresetNames();

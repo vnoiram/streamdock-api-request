@@ -12,6 +12,9 @@ Notable `0.2.0` updates:
 
 - Added run-on-appear, feedback modes, retry settings, pretty JSON display, and Property Inspector request testing.
 - Added optional helper/proxy support, `{{secret:NAME}}` references resolved from helper environment variables, conditional display templates, and request sequences.
+- Added key image state generation. Successful, failed, unset, and diagnostic states can now show distinct generated images; `Conditions` entries may also set `imageLabel`, `imageColor`, and `imageSub`.
+- Added condition-level feedback/log controls and previous-value diff placeholders.
+- Added Property Inspector `Copy` / `Paste` for quickly duplicating action settings between keys.
 - Added `npm run clean` and `npm run release:zip`.
 - Release zips include the manifest version in the filename.
 
@@ -43,6 +46,8 @@ Notable `0.2.0` updates:
 - `Helper URL` / `Use helper`: sends the request through `helper/api-proxy.js`, useful for CORS-restricted APIs.
 - `Conditions`: optional JSON array for overriding display templates when a result field matches.
 - `Sequence`: optional JSON array of request settings to run in order.
+- `Image state`: enables generated key images based on request results. Condition entries can include `imageLabel`, `imageColor`, and `imageSub`.
+- `Diff`: keeps the previous result value for `{previousValue}`, `{changed}`, and `{delta}` placeholders. If enabled and the value changed, the default display appends the previous value.
 
 Preset examples:
 
@@ -68,11 +73,36 @@ Preset examples:
 
 - JSON responses are parsed when the response content type contains `json`, or when the body looks like JSON.
 - When `Result path` is set, the extracted value becomes `{value}`.
+- Display templates and condition templates support `{status}`, `{ok}`, `{value}`, `{body}`, `{error}`, `{durationMs}`, `{previousValue}`, `{changed}`, and `{delta}`.
 - Non-JSON responses are treated as text. `Result path` requires a JSON response.
 - Successful requests call `showOk`.
 - Failed requests call `showAlert` and write a Stream Dock log message.
+- `Conditions` entries can override title/image and feedback. Use `showOk: true`, `showAlert: true`, or `log: "message {value}"` for condition-specific behavior.
 - The Property Inspector `Test` button sends the current request and shows status/duration without pressing the Stream Dock key.
+- The Property Inspector `Copy` / `Paste` buttons move the current JSON settings through the clipboard, which is useful when duplicating a configured key.
 - Timeout, invalid headers JSON, invalid response JSON, missing `Result path`, and CORS/network errors are shown on the button.
+
+Condition example:
+
+```json
+[
+  {
+    "path": "changed",
+    "equals": true,
+    "template": "Changed\n{previousValue}->{value}",
+    "imageLabel": "DIFF",
+    "imageColor": "#b7791f",
+    "showOk": true,
+    "log": "API value changed by {delta}"
+  },
+  {
+    "path": "status",
+    "equals": 500,
+    "template": "Down\n{error}",
+    "showAlert": true
+  }
+]
+```
 
 ## Important Limits
 
