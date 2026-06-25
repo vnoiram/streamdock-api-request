@@ -28,7 +28,12 @@
     conditionsJson: '',
     sequenceJson: '',
     imageMode: true,
-    diffMode: false
+    diffMode: false,
+    cooldownMs: 0,
+    runningTitle: '',
+    onlyFeedbackOnChange: false,
+    includeTimestamp: false,
+    failOnConditionMiss: false
   };
 
   function byId(id) {
@@ -75,6 +80,8 @@
     settings.runOnAppear = byId('runOnAppear').checked;
     settings.feedbackMode = byId('feedbackMode').value;
     settings.retryCount = Number(byId('retryCount').value) || 0;
+    settings.cooldownMs = Number(byId('cooldownMs').value) || 0;
+    settings.runningTitle = byId('runningTitle').value;
     settings.retryDelayMs = Number(byId('retryDelayMs').value) || 0;
     settings.prettyJson = byId('prettyJson').checked;
     settings.presetsJson = byId('presetsJson').value.trim();
@@ -85,6 +92,8 @@
     settings.sequenceJson = byId('sequenceJson').value.trim();
     settings.imageMode = byId('imageMode').checked;
     settings.diffMode = byId('diffMode').checked;
+    settings.onlyFeedbackOnChange = byId('onlyFeedbackOnChange').checked;
+    settings.failOnConditionMiss = byId('failOnConditionMiss').checked;
   }
 
   function update() {
@@ -112,6 +121,8 @@
       'successStatuses',
       'feedbackMode',
       'retryCount',
+      'cooldownMs',
+      'runningTitle',
       'retryDelayMs',
       'presetsJson',
       'presetName',
@@ -128,6 +139,8 @@
     byId('useHelper').checked = settings.useHelper === true || settings.useHelper === 'true';
     byId('imageMode').checked = settings.imageMode !== false && settings.imageMode !== 'false';
     byId('diffMode').checked = settings.diffMode === true || settings.diffMode === 'true';
+    byId('onlyFeedbackOnChange').checked = settings.onlyFeedbackOnChange === true || settings.onlyFeedbackOnChange === 'true';
+    byId('failOnConditionMiss').checked = settings.failOnConditionMiss === true || settings.failOnConditionMiss === 'true';
     renderPresetNames();
   }
 
@@ -322,6 +335,8 @@
       'successStatuses',
       'feedbackMode',
       'retryCount',
+      'cooldownMs',
+      'runningTitle',
       'retryDelayMs',
       'presetsJson',
       'presetName',
@@ -333,7 +348,7 @@
       byId(id).addEventListener('input', update);
       byId(id).addEventListener('change', update);
     });
-    ['runOnAppear', 'prettyJson', 'useHelper', 'imageMode', 'diffMode'].forEach(function (id) {
+    ['runOnAppear', 'prettyJson', 'useHelper', 'imageMode', 'diffMode', 'onlyFeedbackOnChange', 'failOnConditionMiss'].forEach(function (id) {
       byId(id).addEventListener('change', update);
     });
     byId('methodPreset').addEventListener('change', function () {

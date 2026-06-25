@@ -29,7 +29,12 @@
     conditionsJson: '',
     sequenceJson: '',
     imageMode: true,
-    diffMode: false
+    diffMode: false,
+    cooldownMs: 0,
+    runningTitle: '',
+    onlyFeedbackOnChange: false,
+    includeTimestamp: false,
+    failOnConditionMiss: false
   };
 
   var streamDockSocket = null;
@@ -193,9 +198,10 @@
       durationMs: result.durationMs || '',
       previousValue: result.previousValueText || '',
       changed: result.changed ? 'true' : 'false',
-      delta: result.deltaText || ''
+      delta: result.deltaText || '',
+      timestamp: result.timestamp || ''
     };
-    var text = template.replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
+    var text = template.replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta|timestamp)\}/g, function (_, key) {
       return replacements[key];
     });
     return truncate(applyConditions(text, settings, result), settings.maxChars);
@@ -224,9 +230,7 @@
           delta: result.deltaText
         }, item.path || 'value');
         var expected = item.equals;
-        var matched = item.contains !== undefined
-          ? String(left).indexOf(String(item.contains)) !== -1
-          : String(left) === String(expected);
+        var matched = conditionMatches(left, item, expected);
         if (matched) {
           return item;
         }
@@ -237,19 +241,40 @@
     return null;
   }
 
+  function conditionMatches(left, item, expected) {
+    if (item.regex !== undefined) {
+      try {
+        return new RegExp(String(item.regex)).test(String(left));
+      } catch (error) {
+        return false;
+      }
+    }
+    if (item.contains !== undefined) {
+      return String(left).indexOf(String(item.contains)) !== -1;
+    }
+    var numberLeft = Number(left);
+    if (item.gt !== undefined) return Number.isFinite(numberLeft) && numberLeft > Number(item.gt);
+    if (item.gte !== undefined) return Number.isFinite(numberLeft) && numberLeft >= Number(item.gte);
+    if (item.lt !== undefined) return Number.isFinite(numberLeft) && numberLeft < Number(item.lt);
+    if (item.lte !== undefined) return Number.isFinite(numberLeft) && numberLeft <= Number(item.lte);
+    if (item.notEquals !== undefined) return String(left) !== String(item.notEquals);
+    return String(left) === String(expected);
+  }
+
   function replacementValue(result, key) {
     if (key === 'value') return result.valueText;
     if (key === 'body') return result.bodyText;
     if (key === 'previousValue') return result.previousValueText;
     if (key === 'changed') return result.changed ? 'true' : 'false';
     if (key === 'delta') return result.deltaText;
+    if (key === 'timestamp') return result.timestamp || '';
     return result[key];
   }
 
   function applyConditions(text, settings, result) {
     var item = conditionResult(settings, result);
     if (item && item.template) {
-      return String(item.template).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
+      return String(item.template).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta|timestamp)\}/g, function (_, key) {
         return String(replacementValue(result, key) || '');
       });
     }
@@ -309,7 +334,8 @@
         valueText: '',
         bodyText: '',
         error: 'missing URL',
-        durationMs: 0
+        durationMs: 0,
+        timestamp: new Date().toISOString()
       }, runOptions));
     }
 
@@ -340,7 +366,8 @@
         valueText: '',
         bodyText: '',
         error: error.message,
-        durationMs: Date.now() - started
+        durationMs: Date.now() - started,
+        timestamp: new Date().toISOString()
       }, runOptions));
     }
 
@@ -367,7 +394,8 @@
           valueText: parseError ? '' : stringifyValue(value, settings.prettyJson),
           bodyText: settings.prettyJson && parsed !== null ? stringifyValue(parsed, true) : text,
           error: parseError || (ok ? '' : 'HTTP ' + response.status),
-          durationMs: Date.now() - started
+          durationMs: Date.now() - started,
+          timestamp: new Date().toISOString()
         }, runOptions);
       });
     }).catch(function (error) {
@@ -378,7 +406,8 @@
         valueText: '',
         bodyText: '',
         error: isAbort ? 'timeout' : 'CORS/network error',
-        durationMs: Date.now() - started
+        durationMs: Date.now() - started,
+        timestamp: new Date().toISOString()
       }, runOptions);
     }).then(function (result) {
       if (timeout) clearTimeout(timeout);
@@ -452,6 +481,10 @@
     result.changed = result.previousValueText !== '' && String(result.previousValueText) !== String(result.valueText);
     result.deltaText = numericDelta(result.valueText, result.previousValueText);
     var condition = conditionResult(settings, result);
+    if (settings.failOnConditionMiss && result.ok && settings.conditionsJson && !condition) {
+      result.ok = false;
+      result.error = 'condition miss';
+    }
     lastRequest = {
       endpoint: settings.url || '',
       method: normalizeMethod(settings.method),
@@ -470,7 +503,7 @@
       refreshDiagnostics();
     }
     if (condition && condition.log) {
-      logMessage(String(condition.log).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta)\}/g, function (_, key) {
+      logMessage(String(condition.log).replace(/\{(status|ok|value|body|error|durationMs|previousValue|changed|delta|timestamp)\}/g, function (_, key) {
         return String(replacementValue(result, key) || '');
       }));
     }
@@ -479,6 +512,9 @@
     }
     if (condition && condition.showAlert === true) {
       showAlert(context);
+    }
+    if (settings.onlyFeedbackOnChange && !result.changed && result.previousValueText !== '') {
+      return result;
     }
     if (feedbackMode === 'none' || condition && (condition.showOk === true || condition.showAlert === true)) {
       return result;
@@ -496,6 +532,17 @@
       }
     }
     return result;
+  }
+
+  function isCoolingDown(context, settings) {
+    var cooldown = Number(settings.cooldownMs) || 0;
+    return cooldown > 0 && contexts[context] && contexts[context].lastRunAt && Date.now() - contexts[context].lastRunAt < cooldown;
+  }
+
+  function markRunStarted(context, settings) {
+    if (contexts[context]) {
+      contexts[context].lastRunAt = Date.now();
+    }
   }
 
   function numericDelta(value, previous) {
@@ -554,6 +601,14 @@
 
   function runRequestWithConfiguredFeedback(context) {
     var settings = settingsFor(context);
+    if (isCoolingDown(context, settings)) {
+      showAlert(context);
+      return Promise.resolve(null);
+    }
+    markRunStarted(context);
+    if (settings.runningTitle) {
+      setTitle(context, settings.runningTitle);
+    }
     return runSequence(context, settings, { feedbackMode: feedbackModeFor(context, settings) });
   }
 
@@ -624,7 +679,8 @@
       action: message.action || previous.action,
       settings: message.payload && message.payload.settings || {},
       lastResult: null,
-      timer: null
+      timer: null,
+      lastRunAt: previous.lastRunAt || 0
     };
     initialTitle(message.context);
     if (message.action === ACTION_POLL) {

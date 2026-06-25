@@ -15,6 +15,8 @@ Notable `0.2.0` updates:
 - Added key image state generation. Successful, failed, unset, and diagnostic states can now show distinct generated images; `Conditions` entries may also set `imageLabel`, `imageColor`, and `imageSub`.
 - Added condition-level feedback/log controls and previous-value diff placeholders.
 - Added Property Inspector `Copy` / `Paste` for quickly duplicating action settings between keys.
+- Added condition operators: `gt`, `gte`, `lt`, `lte`, `notEquals`, and `regex`.
+- Added request cooldown, optional running title, change-only feedback, condition-required success mode, and `{timestamp}` template placeholder.
 - Added `npm run clean` and `npm run release:zip`.
 - Release zips include the manifest version in the filename.
 
@@ -48,6 +50,10 @@ Notable `0.2.0` updates:
 - `Sequence`: optional JSON array of request settings to run in order.
 - `Image state`: enables generated key images based on request results. Condition entries can include `imageLabel`, `imageColor`, and `imageSub`.
 - `Diff`: keeps the previous result value for `{previousValue}`, `{changed}`, and `{delta}` placeholders. If enabled and the value changed, the default display appends the previous value.
+- `Cooldown ms`: ignores repeated key presses within the configured window.
+- `Running title`: temporary title shown while a request is in flight.
+- `Change only`: suppresses normal OK/alert feedback when the extracted value did not change.
+- `Require cond`: treats an otherwise successful response as failed when no condition matches.
 
 Preset examples:
 
@@ -73,7 +79,7 @@ Preset examples:
 
 - JSON responses are parsed when the response content type contains `json`, or when the body looks like JSON.
 - When `Result path` is set, the extracted value becomes `{value}`.
-- Display templates and condition templates support `{status}`, `{ok}`, `{value}`, `{body}`, `{error}`, `{durationMs}`, `{previousValue}`, `{changed}`, and `{delta}`.
+- Display templates and condition templates support `{status}`, `{ok}`, `{value}`, `{body}`, `{error}`, `{durationMs}`, `{previousValue}`, `{changed}`, `{delta}`, and `{timestamp}`.
 - Non-JSON responses are treated as text. `Result path` requires a JSON response.
 - Successful requests call `showOk`.
 - Failed requests call `showAlert` and write a Stream Dock log message.
@@ -103,6 +109,8 @@ Condition example:
   }
 ]
 ```
+
+Condition comparisons support `equals`, `notEquals`, `contains`, `regex`, `gt`, `gte`, `lt`, and `lte`.
 
 ## Important Limits
 

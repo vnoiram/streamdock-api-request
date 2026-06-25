@@ -76,6 +76,14 @@
       <input id="retryCount" class="sdpi-item-value" type="number" min="0" max="10" value="0">
     </div>
     <div class="sdpi-item">
+      <div class="sdpi-item-label">Cooldown ms</div>
+      <input id="cooldownMs" class="sdpi-item-value" type="number" min="0" max="3600000" value="0">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Running title</div>
+      <input id="runningTitle" class="sdpi-item-value" placeholder="Loading...">
+    </div>
+    <div class="sdpi-item">
       <div class="sdpi-item-label">Retry delay</div>
       <input id="retryDelayMs" class="sdpi-item-value" type="number" min="0" max="60000" value="500">
     </div>
@@ -110,6 +118,16 @@
       <div class="sdpi-item-label">Diff</div>
       <input id="diffMode" class="sdpi-checkbox" type="checkbox">
       <span class="sdpi-status">keep previous value placeholders</span>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Change only</div>
+      <input id="onlyFeedbackOnChange" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">suppress feedback when value is unchanged</span>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Require cond</div>
+      <input id="failOnConditionMiss" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">fail when no condition matches</span>
     </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Sequence</div>
