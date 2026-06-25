@@ -126,6 +126,8 @@ STREAMDOCK_SECRET_API_TOKEN=... npm run helper
 
 Then set `Helper URL` to `http://127.0.0.1:41923/request` and enable `Use helper`.
 
+The helper binds to localhost by default. If `STREAMDOCK_API_HELPER_HOST` is set to a non-loopback address, it is ignored unless `STREAMDOCK_API_HELPER_ALLOW_REMOTE=1` is also set. The Property Inspector warns when the configured helper URL is remote because request URLs, headers, and bodies are sent to that helper.
+
 ## Repository Layout
 
 - `manifest.json`: Stream Dock plugin manifest.

@@ -3,8 +3,14 @@
 
 const http = require('http');
 
-const host = process.env.STREAMDOCK_API_HELPER_HOST || '127.0.0.1';
+const requestedHost = process.env.STREAMDOCK_API_HELPER_HOST || '127.0.0.1';
+const allowRemote = /^(1|true|yes|on)$/i.test(process.env.STREAMDOCK_API_HELPER_ALLOW_REMOTE || '');
+const host = allowRemote || isLoopbackHost(requestedHost) ? requestedHost : '127.0.0.1';
 const port = Number(process.env.STREAMDOCK_API_HELPER_PORT || 41923);
+
+function isLoopbackHost(value) {
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(String(value || '').toLowerCase());
+}
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -74,5 +80,8 @@ function corsHeaders(extra) {
 }
 
 http.createServer(handleRequest).listen(port, host, () => {
+  if (host !== requestedHost) {
+    console.warn(`STREAMDOCK_API_HELPER_HOST=${requestedHost} ignored; set STREAMDOCK_API_HELPER_ALLOW_REMOTE=1 to bind remotely`);
+  }
   console.log(`streamdock-api-request helper listening on http://${host}:${port}/request`);
 });

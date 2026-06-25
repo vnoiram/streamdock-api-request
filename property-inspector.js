@@ -110,6 +110,7 @@
     websocket.send(JSON.stringify({ event: 'setSettings', context: context, payload: settings }));
     renderPresetNames();
     renderSecretGuidance();
+    renderHelperStatus();
   }
 
   function applySettings(next) {
@@ -150,6 +151,7 @@
     byId('failOnConditionMiss').checked = settings.failOnConditionMiss === true || settings.failOnConditionMiss === 'true';
     renderPresetNames();
     renderSecretGuidance();
+    renderHelperStatus();
   }
 
   function parsePresets() {
@@ -247,6 +249,30 @@
       return;
     }
     element.textContent = 'secret-like header: use helper + {{secret:' + secretName(findings[0]) + '}}';
+  }
+
+  function renderHelperStatus() {
+    var element = byId('helperStatus');
+    if (!element) return;
+    var endpoint = byId('helperEndpoint').value.trim();
+    if (!endpoint) {
+      element.textContent = byId('useHelper').checked ? 'helper URL required' : 'localhost helper';
+      return;
+    }
+    if (!/^https?:\/\//i.test(endpoint)) {
+      element.textContent = 'invalid HTTP helper URL';
+      return;
+    }
+    element.textContent = isLoopbackEndpoint(endpoint) ? 'localhost helper' : 'remote helper: sends request data off this PC';
+  }
+
+  function isLoopbackEndpoint(endpoint) {
+    try {
+      var url = new URL(endpoint);
+      return ['localhost', '127.0.0.1', '::1', '[::1]'].indexOf(url.hostname) !== -1;
+    } catch (error) {
+      return false;
+    }
   }
 
   function sensitiveHeaderNames(headersJson) {
@@ -482,5 +508,6 @@
     byId('importSettings').addEventListener('change', importSettings);
     renderPresetNames();
     renderSecretGuidance();
+    renderHelperStatus();
   });
 }());
