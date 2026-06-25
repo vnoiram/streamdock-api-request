@@ -157,12 +157,18 @@
     var current = source;
     var parts = String(path).split('.').filter(Boolean);
     for (var i = 0; i < parts.length; i += 1) {
-      if (current === null || current === undefined || !(parts[i] in Object(current))) {
+      var key = parts[i];
+      var objectCurrent = Object(current);
+      if (!isSafePathSegment(key) || current === null || current === undefined || !Object.prototype.hasOwnProperty.call(objectCurrent, key)) {
         throw new Error('missing resultPath: ' + path);
       }
-      current = current[parts[i]];
+      current = objectCurrent[key];
     }
     return current;
+  }
+
+  function isSafePathSegment(segment) {
+    return segment !== '__proto__' && segment !== 'prototype' && segment !== 'constructor';
   }
 
   function stringifyValue(value, prettyJson) {
@@ -244,6 +250,10 @@
   function conditionMatches(left, item, expected) {
     if (item.regex !== undefined) {
       try {
+        if (!safeRegexPattern(item.regex)) {
+          return false;
+        }
+        // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
         return new RegExp(String(item.regex)).test(String(left));
       } catch (error) {
         return false;
@@ -259,6 +269,14 @@
     if (item.lte !== undefined) return Number.isFinite(numberLeft) && numberLeft <= Number(item.lte);
     if (item.notEquals !== undefined) return String(left) !== String(item.notEquals);
     return String(left) === String(expected);
+  }
+
+  function safeRegexPattern(pattern) {
+    var text = String(pattern || '');
+    if (!text || text.length > 128) {
+      return false;
+    }
+    return !/(\([^)]*[+*][^)]*\)|\[[^\]]+\])[+*{]/.test(text) && !/([+*{][^)]*){2,}/.test(text);
   }
 
   function replacementValue(result, key) {

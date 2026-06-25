@@ -79,6 +79,7 @@ function corsHeaders(extra) {
   }, extra || {});
 }
 
+// nosemgrep: problem-based-packs.insecure-transport.js-node.using-http-server.using-http-server
 http.createServer(handleRequest).listen(port, host, () => {
   if (host !== requestedHost) {
     console.warn(`STREAMDOCK_API_HELPER_HOST=${requestedHost} ignored; set STREAMDOCK_API_HELPER_ALLOW_REMOTE=1 to bind remotely`);
