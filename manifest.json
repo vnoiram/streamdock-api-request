@@ -1,0 +1,44 @@
+{
+  "Name": "Stream Dock API Request",
+  "Description": "Send HTTP/API requests directly from a Stream Dock button and display the response.",
+  "Author": "local",
+  "Version": "0.2.0",
+  "CodePath": "plugin.html",
+  "Icon": "icons/plugin",
+  "Category": "Utilities",
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "local.streamdock.api.request",
+      "Name": "API Request",
+      "Tooltip": "Send one configured HTTP/API request when pressed.",
+      "Controllers": ["Keypad"],
+      "Icon": "icons/plugin",
+      "States": [{ "Title": "API", "Image": "icons/plugin" }],
+      "PropertyInspectorPath": "property-inspector.html"
+    },
+    {
+      "UUID": "local.streamdock.api.poll",
+      "Name": "API Poll",
+      "Tooltip": "Poll a configured HTTP/API request while the action is visible.",
+      "Controllers": ["Keypad"],
+      "Icon": "icons/plugin",
+      "States": [{ "Title": "Poll", "Image": "icons/plugin" }],
+      "PropertyInspectorPath": "property-inspector.html"
+    },
+    {
+      "UUID": "local.streamdock.api.diagnostics",
+      "Name": "Diagnostics",
+      "Tooltip": "Show the last API request status, duration, and error.",
+      "Controllers": ["Keypad"],
+      "Icon": "icons/plugin",
+      "States": [{ "Title": "Diag", "Image": "icons/plugin" }],
+      "PropertyInspectorPath": "property-inspector.html"
+    }
+  ]
+}

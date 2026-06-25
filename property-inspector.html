@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="property-inspector.css">
+    <script src="property-inspector.js"></script>
+  </head>
+  <body>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Method</div>
+      <select id="methodPreset" class="sdpi-item-value compact">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="PATCH">PATCH</option>
+        <option value="DELETE">DELETE</option>
+        <option value="CUSTOM">Custom</option>
+      </select>
+      <input id="method" class="sdpi-item-value method-input" placeholder="PROPFIND">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">URL</div>
+      <input id="url" class="sdpi-item-value" placeholder="https://api.example.com/status">
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Headers JSON</div>
+      <textarea id="headersJson" class="sdpi-item-value textarea short" placeholder='{"Authorization":"Bearer token"}'></textarea>
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Body</div>
+      <textarea id="body" class="sdpi-item-value textarea" placeholder='{"enabled":true}'></textarea>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Content-Type</div>
+      <input id="contentType" class="sdpi-item-value" placeholder="application/json">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Timeout ms</div>
+      <input id="timeoutMs" class="sdpi-item-value" type="number" min="100" max="120000" value="5000">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Poll sec</div>
+      <input id="pollIntervalSec" class="sdpi-item-value" type="number" min="1" max="3600" value="60">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Result path</div>
+      <input id="resultPath" class="sdpi-item-value" placeholder="data.temperature">
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Template</div>
+      <textarea id="displayTemplate" class="sdpi-item-value textarea short" placeholder="{status}\n{value}"></textarea>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Max chars</div>
+      <input id="maxChars" class="sdpi-item-value" type="number" min="1" max="400" value="72">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Success</div>
+      <input id="successStatuses" class="sdpi-item-value" placeholder="200,201,204">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Run appear</div>
+      <input id="runOnAppear" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">run API Request when shown</span>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Feedback</div>
+      <select id="feedbackMode" class="sdpi-item-value">
+        <option value="all">All</option>
+        <option value="failures">Failures only</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Retries</div>
+      <input id="retryCount" class="sdpi-item-value" type="number" min="0" max="10" value="0">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Retry delay</div>
+      <input id="retryDelayMs" class="sdpi-item-value" type="number" min="0" max="60000" value="500">
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Pretty JSON</div>
+      <input id="prettyJson" class="sdpi-checkbox" type="checkbox">
+      <span class="sdpi-status">format object values</span>
+    </div>
+    <div class="sdpi-item block">
+      <div class="sdpi-item-label">Presets JSON</div>
+      <textarea id="presetsJson" class="sdpi-item-value textarea" placeholder='{"Local health":{"method":"GET","url":"http://127.0.0.1:8080/health"}}'></textarea>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Preset</div>
+      <input id="presetName" class="sdpi-item-value" list="presetNames" placeholder="Local health">
+      <datalist id="presetNames"></datalist>
+      <button id="applyPreset" class="sdpi-button" type="button">Apply</button>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Settings</div>
+      <button id="testRequest" class="sdpi-button" type="button">Test</button>
+      <button id="exportSettings" class="sdpi-button" type="button">Export</button>
+      <label class="sdpi-button" for="importSettings">Import</label>
+      <input id="importSettings" type="file" accept="application/json" hidden>
+      <span id="status" class="sdpi-status">ready</span>
+    </div>
+  </body>
+</html>
