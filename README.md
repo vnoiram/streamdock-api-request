@@ -15,6 +15,7 @@ Notable `0.2.0` updates:
 - Added key image state generation. Successful, failed, unset, and diagnostic states can now show distinct generated images; `Conditions` entries may also set `imageLabel`, `imageColor`, and `imageSub`.
 - Added condition-level feedback/log controls and previous-value diff placeholders.
 - Added Property Inspector `Copy` / `Paste` for quickly duplicating action settings between keys.
+- Added Property Inspector `Diagnose` for JSON, sample `resultPath`, helper URL, and helper secret checks, plus `Reset` for safe defaults.
 - Added condition operators: `gt`, `gte`, `lt`, `lte`, `notEquals`, and `regex`.
 - Added request cooldown, optional running title, change-only feedback, condition-required success mode, and `{timestamp}` template placeholder.
 - Added `npm run clean` and `npm run release:zip`.

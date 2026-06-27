@@ -449,6 +449,101 @@
     });
   }
 
+  function diagnoseSettings() {
+    readSettingsFromForm();
+    var issues = [];
+    if (!settings.url) issues.push('missing URL');
+    if (settings.useHelper && !settings.helperEndpoint) issues.push('missing helper');
+    ['headersJson', 'conditionsJson', 'sequenceJson', 'presetsJson'].forEach(function (key) {
+      if (settings[key]) {
+        try {
+          JSON.parse(settings[key]);
+        } catch (error) {
+          issues.push(key + ' invalid');
+        }
+      }
+    });
+    try {
+      if (settings.body && settings.resultPath) {
+        valueAtPath(JSON.parse(settings.body), settings.resultPath);
+      }
+    } catch (error) {
+      issues.push('sample path mismatch');
+    }
+    var secrets = secretRefs([settings.headersJson, settings.body, settings.presetsJson, settings.sequenceJson].join('\n'));
+    if (settings.useHelper && settings.helperEndpoint && secrets.length) {
+      fetch(settings.helperEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'diagnose', secrets: secrets })
+      }).then(function (response) {
+        return response.json();
+      }).then(function (data) {
+        var missing = secrets.filter(function (name) { return !(data.secrets || {})[name]; });
+        setStatus((issues.concat(missing.map(function (name) { return 'missing secret ' + name; }))).join(', ') || 'diagnostics ok');
+      }).catch(function () {
+        setStatus((issues.concat(['helper diagnose failed'])).join(', '));
+      });
+      return;
+    }
+    setStatus(issues.join(', ') || 'diagnostics ok');
+  }
+
+  function secretRefs(text) {
+    var names = [];
+    String(text || '').replace(/\{\{secret:([A-Za-z0-9_.-]+)\}\}/g, function (_, name) {
+      if (names.indexOf(name) === -1) names.push(name);
+      return '';
+    });
+    return names;
+  }
+
+  function valueAtPath(source, path) {
+    var current = source;
+    String(path || '').split('.').filter(Boolean).forEach(function (part) {
+      if (part === '__proto__' || part === 'prototype' || part === 'constructor' || current === null || current === undefined || !Object.prototype.hasOwnProperty.call(Object(current), part)) {
+        throw new Error('missing path');
+      }
+      current = Object(current)[part];
+    });
+    return current;
+  }
+
+  function resetSettings() {
+    applySettings({
+      method: 'GET',
+      url: '',
+      headersJson: '',
+      body: '',
+      contentType: '',
+      timeoutMs: 5000,
+      pollIntervalSec: 60,
+      resultPath: '',
+      displayTemplate: '{status}\n{value}',
+      maxChars: 72,
+      successStatuses: '',
+      runOnAppear: false,
+      feedbackMode: 'all',
+      retryCount: 0,
+      retryDelayMs: 500,
+      prettyJson: false,
+      presetsJson: '',
+      presetName: '',
+      helperEndpoint: '',
+      useHelper: false,
+      conditionsJson: '',
+      sequenceJson: '',
+      imageMode: true,
+      diffMode: false,
+      cooldownMs: 0,
+      runningTitle: '',
+      onlyFeedbackOnChange: false,
+      failOnConditionMiss: false
+    });
+    update();
+    setStatus('settings reset');
+  }
+
   window.connectElgatoStreamDeckSocket = function (port, uuid, registerEvent, info, actionInfo) {
     var parsedActionInfo = JSON.parse(actionInfo || '{}');
     context = parsedActionInfo.context || uuid;
@@ -502,6 +597,8 @@
     });
     byId('applyPreset').addEventListener('click', applyPreset);
     byId('testRequest').addEventListener('click', testRequest);
+    byId('diagnoseSettings').addEventListener('click', diagnoseSettings);
+    byId('resetSettings').addEventListener('click', resetSettings);
     byId('copySettings').addEventListener('click', copySettings);
     byId('pasteSettings').addEventListener('click', pasteSettings);
     byId('exportSettings').addEventListener('click', exportSettings);

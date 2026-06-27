@@ -52,6 +52,17 @@ async function handleRequest(req, res) {
 
   try {
     const body = JSON.parse(await readBody(req));
+    if (body.command === 'diagnose') {
+      const secrets = Array.isArray(body.secrets) ? body.secrets : [];
+      const present = {};
+      secrets.forEach(name => {
+        const envName = 'STREAMDOCK_SECRET_' + String(name || '').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        present[name] = !!process.env[envName];
+      });
+      res.writeHead(200, corsHeaders({ 'content-type': 'application/json' }));
+      res.end(JSON.stringify({ ok: true, helper: 'streamdock-api-request', secrets: present }));
+      return;
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), Math.max(100, Number(body.timeoutMs) || 5000));
     const response = await fetch(body.url, {
