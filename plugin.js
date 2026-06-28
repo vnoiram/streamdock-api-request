@@ -34,7 +34,9 @@
     runningTitle: '',
     onlyFeedbackOnChange: false,
     includeTimestamp: false,
-    failOnConditionMiss: false
+    failOnConditionMiss: false,
+    confirmMode: 'off',
+    responseHistoryLimit: 10
   };
 
   var streamDockSocket = null;
@@ -47,6 +49,8 @@
     error: '',
     durationMs: ''
   };
+  var responseHistory = [];
+  var confirmUntil = {};
 
   function parseJson(value, fallback) {
     try {
@@ -510,6 +514,7 @@
       error: result.error,
       durationMs: result.durationMs
     };
+    rememberResponse(settings, result);
     if (contexts[context] && (!options || options.updateTitle !== false)) {
       contexts[context].lastResult = result;
       setTitle(context, resultTitle(result, settings));
@@ -550,6 +555,24 @@
       }
     }
     return result;
+  }
+
+  function rememberResponse(settings, result) {
+    var limit = Math.max(0, Math.min(50, Number(settings.responseHistoryLimit) || 0));
+    if (!limit) {
+      responseHistory = [];
+      return;
+    }
+    responseHistory.unshift({
+      time: result.timestamp || new Date().toISOString(),
+      method: normalizeMethod(settings.method),
+      endpoint: settings.url || '',
+      status: result.status,
+      ok: !!result.ok,
+      durationMs: result.durationMs,
+      value: truncate(result.valueText || result.bodyText || result.error || '', 120)
+    });
+    responseHistory = responseHistory.slice(0, limit);
   }
 
   function isCoolingDown(context, settings) {
@@ -619,6 +642,10 @@
 
   function runRequestWithConfiguredFeedback(context) {
     var settings = settingsFor(context);
+    if (needsConfirmation(settings) && !confirmReady(context)) {
+      setTitle(context, 'Press\nagain');
+      return Promise.resolve(null);
+    }
     if (isCoolingDown(context, settings)) {
       showAlert(context);
       return Promise.resolve(null);
@@ -631,13 +658,31 @@
   }
 
   function diagnosticsTitle() {
+    var recent = responseHistory.slice(0, 2).map(function (item) {
+      return String(item.status || 'ERR') + ' ' + String(item.durationMs || '-') + 'ms';
+    }).join('\n');
     return truncate([
       lastRequest.method || '-',
       lastRequest.endpoint || '-',
       'status ' + (lastRequest.status || '-'),
       'err ' + (lastRequest.error || '-'),
-      String(lastRequest.durationMs || '-') + 'ms'
+      String(lastRequest.durationMs || '-') + 'ms',
+      recent
     ].join('\n'), 120);
+  }
+
+  function needsConfirmation(settings) {
+    return settings.confirmMode === 'secondPress' && /^(POST|PUT|PATCH|DELETE)$/i.test(normalizeMethod(settings.method));
+  }
+
+  function confirmReady(context) {
+    var now = Date.now();
+    if (confirmUntil[context] && confirmUntil[context] > now) {
+      confirmUntil[context] = 0;
+      return true;
+    }
+    confirmUntil[context] = now + 3000;
+    return false;
   }
 
   function refreshDiagnostics() {

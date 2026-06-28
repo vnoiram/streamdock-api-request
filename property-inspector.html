@@ -131,6 +131,17 @@
       <input id="failOnConditionMiss" class="sdpi-checkbox" type="checkbox">
       <span class="sdpi-status">fail when no condition matches</span>
     </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Confirm</div>
+      <select id="confirmMode" class="sdpi-item-value">
+        <option value="off">Off</option>
+        <option value="secondPress">Second press</option>
+      </select>
+    </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">History max</div>
+      <input id="responseHistoryLimit" class="sdpi-item-value" type="number" min="0" max="50" value="10">
+    </div>
     <div class="sdpi-item block">
       <div class="sdpi-item-label">Sequence</div>
       <textarea id="sequenceJson" class="sdpi-item-value textarea" placeholder='[{"method":"POST","url":"http://127.0.0.1:8080/login"},{"method":"GET","url":"http://127.0.0.1:8080/status"}]'></textarea>
@@ -149,6 +160,7 @@
       <button id="copySettings" class="sdpi-button" type="button">Copy</button>
       <button id="pasteSettings" class="sdpi-button" type="button">Paste</button>
       <button id="exportSettings" class="sdpi-button" type="button">Export</button>
+      <button id="copyDiagnostics" class="sdpi-button" type="button">Log</button>
       <label class="sdpi-button" for="importSettings">Import</label>
       <input id="importSettings" type="file" accept="application/json" hidden>
       <span id="status" class="sdpi-status">ready</span>

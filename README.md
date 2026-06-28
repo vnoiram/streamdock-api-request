@@ -18,6 +18,7 @@ Notable `0.2.0` updates:
 - Added Property Inspector `Diagnose` for JSON, sample `resultPath`, helper URL, and helper secret checks, plus `Reset` for safe defaults.
 - Added condition operators: `gt`, `gte`, `lt`, `lte`, `notEquals`, and `regex`.
 - Added request cooldown, optional running title, change-only feedback, condition-required success mode, and `{timestamp}` template placeholder.
+- Added second-press confirmation for mutating requests, response history in Diagnostics, common backup export format, and Property Inspector diagnostic log copy.
 - Added `npm run clean` and `npm run release:zip`.
 - Release zips include the manifest version in the filename.
 
@@ -55,6 +56,8 @@ Notable `0.2.0` updates:
 - `Running title`: temporary title shown while a request is in flight.
 - `Change only`: suppresses normal OK/alert feedback when the extracted value did not change.
 - `Require cond`: treats an otherwise successful response as failed when no condition matches.
+- `Confirm`: optionally requires a second press before `POST`, `PUT`, `PATCH`, or `DELETE` requests.
+- `History max`: stores a short in-memory response history for the Diagnostics action.
 
 Preset examples:
 
@@ -87,6 +90,8 @@ Preset examples:
 - `Conditions` entries can override title/image and feedback. Use `showOk: true`, `showAlert: true`, or `log: "message {value}"` for condition-specific behavior.
 - The Property Inspector `Test` button sends the current request and shows status/duration without pressing the Stream Dock key.
 - The Property Inspector `Copy` / `Paste` buttons move the current JSON settings through the clipboard, which is useful when duplicating a configured key.
+- `Export` / `Copy` emit a common `streamdock-plugin-backup` JSON wrapper while `Import` / `Paste` continue to accept older plain settings JSON.
+- The Property Inspector `Log` button copies recent PI diagnostics from local storage.
 - Timeout, invalid headers JSON, invalid response JSON, missing `Result path`, and CORS/network errors are shown on the button.
 
 Condition example:
