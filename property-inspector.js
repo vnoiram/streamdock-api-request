@@ -34,7 +34,6 @@
     cooldownMs: 0,
     runningTitle: '',
     onlyFeedbackOnChange: false,
-    includeTimestamp: false,
     failOnConditionMiss: false,
     confirmMode: 'off',
     responseHistoryLimit: 10
