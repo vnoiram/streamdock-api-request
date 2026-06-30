@@ -276,10 +276,14 @@
 
   function safeRegexPattern(pattern) {
     var text = String(pattern || '');
-    if (!text || text.length > 128) {
+    if (!text || text.length > 64) {
       return false;
     }
-    return !/(\([^)]*[+*][^)]*\)|\[[^\]]+\])[+*{]/.test(text) && !/([+*{][^)]*){2,}/.test(text);
+    if (/(\([^)]*[+*][^)]*\)|\[[^\]]+\])[+*{]/.test(text)) return false;
+    if (/([+*{][^)]*){2,}/.test(text)) return false;
+    if (/\([^)]+\|[^)]+\)[+*{?]/.test(text)) return false;
+    if (/\([^)]*\.[*+][^)]*\)[+*{]/.test(text)) return false;
+    return true;
   }
 
   function replacementValue(result, key) {
@@ -362,7 +366,7 @@
 
     var started = Date.now();
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timeoutMs = Math.max(100, Number(settings.timeoutMs) || Number(DEFAULT_SETTINGS.timeoutMs));
+    var timeoutMs = Math.max(100, Math.min(120000, Number(settings.timeoutMs) || Number(DEFAULT_SETTINGS.timeoutMs)));
     var timeout = controller ? setTimeout(function () {
       controller.abort();
     }, timeoutMs) : null;
