@@ -2,7 +2,7 @@
   "Name": "Stream Dock API Request",
   "Description": "Send HTTP/API requests directly from a Stream Dock button and display the response.",
   "Author": "local",
-  "Version": "0.2.0",
+  "Version": "0.2.1",
   "CodePath": "plugin.html",
   "Icon": "icons/plugin",
   "Category": "Utilities",
