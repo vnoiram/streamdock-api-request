@@ -10,5 +10,8 @@ New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
 $Zip = Join-Path $ReleaseDir "streamdock-api-request-$($Manifest.Version).zip"
 if (Test-Path $Zip) { Remove-Item $Zip -Force }
 
-Compress-Archive -Path "dist/stream-dock-api-request.sdPlugin" -DestinationPath $Zip
+Compress-Archive -Path @(
+  "dist/stream-dock-api-request.sdPlugin",
+  "scripts/install-local.ps1"
+) -DestinationPath $Zip
 Write-Host "Wrote $Zip"
