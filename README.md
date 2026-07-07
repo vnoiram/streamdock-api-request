@@ -1,8 +1,8 @@
 # streamdock-api-request
 
-Mirabox Stream Dock JavaScript/HTML plugin for sending HTTP/API requests directly from a Stream Dock button.
+Mirabox Stream Dock JavaScript/HTML plugin for sending HTTP/API requests from a Stream Dock button.
 
-This v1 plugin does not include a helper, proxy, or native component. Requests are sent with browser/runtime `fetch()` from `plugin.js`, so normal browser restrictions still apply.
+Requests are sent with browser/runtime `fetch()` from `plugin.js` by default. An optional local Node.js helper can proxy requests for CORS-restricted APIs and resolve `{{secret:NAME}}` references from environment variables.
 
 ## Version
 
@@ -120,7 +120,7 @@ Condition comparisons support `equals`, `notEquals`, `contains`, `regex`, `gt`, 
 
 ## Important Limits
 
-Because v1 has no helper, it cannot bypass CORS. If an API does not allow the Stream Dock plugin runtime origin, the request may fail as `CORS/network error`.
+Direct requests from `plugin.js` cannot bypass CORS. If an API does not allow the Stream Dock plugin runtime origin, the request may fail as `CORS/network error`; enable the helper for APIs that require a local proxy.
 
 Secrets such as API keys and bearer tokens are stored in Stream Dock action settings as plain text when placed directly in `Headers JSON`. Prefer `{{secret:NAME}}` with the helper, then set `STREAMDOCK_SECRET_NAME` in the helper process environment. The Property Inspector warns on common secret headers such as `Authorization`, `Cookie`, and `X-API-Key`; `Copy` and `Export` replace those header values with `{{secret:HEADER_NAME}}` placeholders.
 
@@ -130,7 +130,13 @@ Optional helper:
 STREAMDOCK_SECRET_API_TOKEN=... npm run helper
 ```
 
-Then set `Helper URL` to `http://127.0.0.1:41923/request` and enable `Use helper`.
+Release zips include the helper as a sidecar `helper/` directory. To install that helper into the plugin folder, run:
+
+```powershell
+.\scripts\install-local.ps1 -InstallHelper
+```
+
+Then run `node helper/api-proxy.js`, set `Helper URL` to `http://127.0.0.1:41923/request`, and enable `Use helper`.
 
 The helper binds to localhost by default. If `STREAMDOCK_API_HELPER_HOST` is set to a non-loopback address, it is ignored unless `STREAMDOCK_API_HELPER_ALLOW_REMOTE=1` is also set. The Property Inspector warns when the configured helper URL is remote because request URLs, headers, and bodies are sent to that helper.
 

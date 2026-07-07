@@ -3,6 +3,7 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
 
 npm run package
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $Manifest = Get-Content "manifest.json" -Raw | ConvertFrom-Json
 $ReleaseDir = Join-Path $Root "dist/release"
@@ -12,6 +13,7 @@ if (Test-Path $Zip) { Remove-Item $Zip -Force }
 
 Compress-Archive -Path @(
   "dist/stream-dock-api-request.sdPlugin",
+  "helper",
   "scripts/install-local.ps1"
 ) -DestinationPath $Zip
 Write-Host "Wrote $Zip"

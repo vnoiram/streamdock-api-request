@@ -5,7 +5,7 @@
   "Version": "0.2.1",
   "CodePath": "plugin.html",
   "Icon": "icons/plugin",
-  "Category": "Utilities",
+  "Category": "API-Request",
   "OS": [
     {
       "Platform": "windows",
