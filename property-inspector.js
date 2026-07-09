@@ -6,6 +6,7 @@
   var SENSITIVE_FIELD = /(password|passwd|secret|token|api[_-]?key|authorization|auth)/i;
   var websocket = null;
   var context = null;
+  var currentAction = '';
   var settings = {
     method: 'GET',
     url: '',
@@ -38,9 +39,40 @@
     confirmMode: 'off',
     responseHistoryLimit: 10
   };
+  var COMMON_FIELDS = ['helperEndpoint', 'useHelper', 'diagnoseSettings', 'resetSettings', 'copySettings', 'pasteSettings', 'exportSettings', 'copyDiagnostics', 'importSettings'];
+  var REQUEST_FIELDS = ['url', 'methodPreset', 'method', 'headersJson', 'body', 'contentType', 'timeoutMs', 'resultPath', 'displayTemplate', 'maxChars', 'successStatuses', 'runOnAppear', 'feedbackMode', 'retryCount', 'cooldownMs', 'runningTitle', 'retryDelayMs', 'prettyJson', 'presetsJson', 'presetName', 'applyPreset', 'conditionsJson', 'imageMode', 'diffMode', 'onlyFeedbackOnChange', 'failOnConditionMiss', 'confirmMode', 'responseHistoryLimit', 'sequenceJson', 'testRequest'];
+  var ACTION_FIELDS = {
+    'local.streamdock.api.request': REQUEST_FIELDS,
+    'local.streamdock.api.poll': REQUEST_FIELDS.concat(['pollIntervalSec']).filter(function (id) { return id !== 'runOnAppear'; }),
+    'local.streamdock.api.diagnostics': ['headersJson', 'timeoutMs', 'helperEndpoint', 'useHelper', 'diagnoseSettings', 'copyDiagnostics']
+  };
 
   function byId(id) {
     return document.getElementById(id);
+  }
+
+  function rowFor(id) {
+    var element = byId(id);
+    while (element && element !== document.body) {
+      if (element.classList && element.classList.contains('sdpi-item')) return element;
+      element = element.parentNode;
+    }
+    return null;
+  }
+
+  function setFieldVisible(id, visible) {
+    var row = rowFor(id);
+    if (row) row.classList.toggle('is-hidden', !visible);
+  }
+
+  function applyVisibility() {
+    var visible = {};
+    COMMON_FIELDS.concat(ACTION_FIELDS[currentAction] || REQUEST_FIELDS).forEach(function (id) {
+      visible[id] = true;
+    });
+    Object.keys(settings).concat(['methodPreset', 'method', 'applyPreset', 'testRequest', 'diagnoseSettings', 'resetSettings', 'copySettings', 'pasteSettings', 'exportSettings', 'copyDiagnostics', 'importSettings']).forEach(function (id) {
+      setFieldVisible(id, !!visible[id]);
+    });
   }
 
   function setStatus(text) {
@@ -603,6 +635,8 @@
   window.connectElgatoStreamDeckSocket = function (port, uuid, registerEvent, info, actionInfo) {
     var parsedActionInfo = JSON.parse(actionInfo || '{}');
     context = parsedActionInfo.context || uuid;
+    currentAction = parsedActionInfo.action || '';
+    applyVisibility();
     websocket = new WebSocket('ws://127.0.0.1:' + port);
     websocket.onopen = function () {
       websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
@@ -665,5 +699,6 @@
     renderPresetNames();
     renderSecretGuidance();
     renderHelperStatus();
+    applyVisibility();
   });
 }());
