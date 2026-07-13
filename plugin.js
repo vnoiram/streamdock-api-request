@@ -50,6 +50,7 @@
   };
   var responseHistory = [];
   var confirmUntil = {};
+  var warnedRegexes = {};
 
   function parseJson(value, fallback) {
     try {
@@ -116,9 +117,23 @@
     return headers;
   }
 
-  function resolveSecretRefs(value) {
-    return String(value || '').replace(/\{\{secret:([A-Za-z0-9_.-]+)\}\}/g, function (_, name) {
-      return '{{secret:' + name + '}}';
+  var SECRET_REF_PATTERN = /\{\{secret:[A-Za-z0-9_.-]+\}\}/;
+
+  function containsSecretRef(value) {
+    return SECRET_REF_PATTERN.test(String(value || ''));
+  }
+
+  function willUseHelper(settings) {
+    return !!(settings.useHelper && settings.helperEndpoint);
+  }
+
+  function requestHasUnresolvedSecrets(settings, requestOptions) {
+    if (containsSecretRef(settings.body)) {
+      return true;
+    }
+    var headers = requestOptions.headers || {};
+    return Object.keys(headers).some(function (key) {
+      return containsSecretRef(headers[key]);
     });
   }
 
@@ -254,6 +269,7 @@
     if (item.regex !== undefined) {
       try {
         if (!safeRegexPattern(item.regex)) {
+          warnUnsafeRegex(item.regex);
           return false;
         }
         // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
@@ -284,6 +300,15 @@
     if (/\([^)]+\|[^)]+\)[+*{?]/.test(text)) return false;
     if (/\([^)]*\.[*+][^)]*\)[+*{]/.test(text)) return false;
     return true;
+  }
+
+  function warnUnsafeRegex(pattern) {
+    var key = String(pattern || '');
+    if (warnedRegexes[key]) {
+      return;
+    }
+    warnedRegexes[key] = true;
+    logMessage('condition regex rejected as unsafe/too complex, condition disabled for this pattern: ' + key);
   }
 
   function replacementValue(result, key) {
@@ -396,6 +421,19 @@
       }, runOptions));
     }
 
+    if (!willUseHelper(settings) && requestHasUnresolvedSecrets(settings, requestOptions)) {
+      if (timeout) clearTimeout(timeout);
+      return Promise.resolve(finishRequest(context, settings, {
+        ok: false,
+        status: '',
+        valueText: '',
+        bodyText: '',
+        error: 'secret refs require helper',
+        durationMs: Date.now() - started,
+        timestamp: new Date().toISOString()
+      }, runOptions));
+    }
+
     return executeFetch(settings, method, requestOptions).then(function (response) {
       return response.text().then(function (text) {
         var parsed = null;
@@ -441,7 +479,7 @@
   }
 
   function executeFetch(settings, method, requestOptions) {
-    if (settings.useHelper && settings.helperEndpoint) {
+    if (willUseHelper(settings)) {
       return fetch(settings.helperEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -454,9 +492,6 @@
         })
       });
     }
-    Object.keys(requestOptions.headers || {}).forEach(function (key) {
-      requestOptions.headers[key] = resolveSecretRefs(requestOptions.headers[key]);
-    });
     return fetch(settings.url, requestOptions);
   }
 
